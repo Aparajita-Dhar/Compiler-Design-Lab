@@ -1,0 +1,39 @@
+#include <iostream>
+#include <string>
+
+using namespace std;
+
+// Pattern: exactly the string "a"
+bool matchA(const string& s) {
+    return s == "a";
+}
+
+// Pattern: a*b+  (zero or more 'a', then one or more 'b')
+bool matchAstarBplus(const string& s) {
+    if (s.empty()) return false;            // needs at least one 'b'
+
+    size_t i = 0;
+    while (i < s.length() && s[i] == 'a') i++;   // skip a's
+
+    if (i == s.length()) return false;      // all a's, no b
+    while (i < s.length() && s[i] == 'b') i++;   // skip b's
+
+    return i == s.length();                 // must be at the end
+}
+
+// Pattern: exactly the string "abb"
+bool matchABB(const string& s) {
+    return s == "abb";
+}
+
+int main() {
+    string s;
+    cout << "Enter string: ";
+    cin >> s;
+
+    cout << "Pattern a:    " << (matchA(s)            ? "YES" : "NO") << "\n";
+    cout << "Pattern a*b+: " << (matchAstarBplus(s)   ? "YES" : "NO") << "\n";
+    cout << "Pattern abb:  " << (matchABB(s)          ? "YES" : "NO") << "\n";
+
+    return 0;
+}
