@@ -1,0 +1,96 @@
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <string>
+using namespace std;
+
+string trim(const string &s) {
+    size_t a = s.find_first_not_of(" \t\r\n");
+    if (a == string::npos) return "";
+    size_t b = s.find_last_not_of(" \t\r\n");
+    return s.substr(a, b - a + 1);
+}
+
+bool startsWith(const string &s, const string &pre) {
+    return s.rfind(pre, 0) == 0;
+}
+
+int main() {
+    ifstream f("grammar.txt");
+    if (!f) { cout << "File not found!\n"; return 1; }
+
+    vector<string> nt;
+    vector<vector<string>> prods;
+    string line;
+
+    while (getline(f, line)) {
+        size_t arrow = line.find("->");
+        if (arrow == string::npos) continue;
+
+        string L = trim(line.substr(0, arrow));
+        string rhs = line.substr(arrow + 2);
+
+        vector<string> alts;
+        size_t start = 0;
+        for (size_t i = 0; i <= rhs.size(); i++) {
+            if (i == rhs.size() || rhs[i] == '|') {
+                string alt = trim(rhs.substr(start, i - start));
+                if (!alt.empty()) alts.push_back(alt);
+                start = i + 1;
+            }
+        }
+        nt.push_back(L);
+        prods.push_back(alts);
+    }
+
+    cout << "Original Grammar:\n";
+    for (size_t i = 0; i < nt.size(); i++) {
+        cout << nt[i] << " -> ";
+        for (size_t j = 0; j < prods[i].size(); j++) {
+            if (j) cout << " | ";
+            cout << prods[i][j];
+        }
+        cout << "\n";
+    }
+
+    cout << "\nAfter eliminating left recursion:\n";
+
+    for (size_t i = 0; i < nt.size(); i++) {
+        vector<string> alpha, beta;
+        for (auto &alt : prods[i]) {
+            if (startsWith(alt, nt[i])) {
+                string rest = alt.substr(nt[i].size());
+                if (!rest.empty()) alpha.push_back(rest);   // skip A -> A
+            } else {
+                beta.push_back(alt);
+            }
+        }
+
+        if (alpha.empty()) {
+            cout << nt[i] << " -> ";
+            for (size_t j = 0; j < prods[i].size(); j++) {
+                if (j) cout << " | ";
+                cout << prods[i][j];
+            }
+            cout << "\n";
+            continue;
+        }
+
+        string newNT = nt[i] + "'";
+
+        cout << nt[i] << " -> ";
+        for (size_t j = 0; j < beta.size(); j++) {
+            if (j) cout << " | ";
+            cout << beta[j] << newNT;
+        }
+        cout << "\n";
+
+        cout << newNT << " -> ";
+        for (size_t j = 0; j < alpha.size(); j++) {
+            if (j) cout << " | ";
+            cout << alpha[j] << newNT;
+        }
+        cout << " | ε\n";
+    }
+    return 0;
+}
