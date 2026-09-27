@@ -1,0 +1,200 @@
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <vector>
+#include <set>
+#include <map>
+#include <cctype>
+#include <windows.h>
+using namespace std;
+
+string trim(const string &s) {
+    size_t a = s.find_first_not_of(" \t\r\n");
+    if (a == string::npos) return "";
+    size_t b = s.find_last_not_of(" \t\r\n");
+    return s.substr(a, b - a + 1);
+}
+
+int main() {
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
+
+    ifstream f("grammar.txt");
+    if (!f) { cout << "File not found!\n"; return 1; }
+
+    vector<string> ntList;
+    set<string> nonterminals;
+    vector<pair<string, string>> rawRules;
+    map<string, vector<vector<string>>> grammar;
+
+    string line;
+
+    // ---------- PASS 1: collect nonterminals ----------
+    while (getline(f, line)) {
+        size_t arrow = line.find("->");
+        if (arrow == string::npos) continue;
+
+        string L = trim(line.substr(0, arrow));
+        string rhs = line.substr(arrow + 2);
+        rawRules.push_back({L, rhs});
+
+        if (nonterminals.find(L) == nonterminals.end()) {
+            nonterminals.insert(L);
+            ntList.push_back(L);
+        }
+    }
+
+    // ---------- PASS 2: tokenize RHS ----------
+    for (auto &pr : rawRules) {
+        const string &L = pr.first;
+        const string &rhs = pr.second;
+
+        size_t start = 0;
+        for (size_t i = 0; i <= rhs.size(); i++) {
+            if (i == rhs.size() || rhs[i] == '|') {
+                string alt = trim(rhs.substr(start, i - start));
+                start = i + 1;
+
+                vector<string> tokens;
+                if (alt.empty() || alt == "ε" || alt == "eps" || alt == "@" || alt == "lambda") {
+                    tokens.push_back("ε");
+                } else {
+                    size_t p = 0;
+                    while (p < alt.size()) {
+                        if (isspace((unsigned char)alt[p])) { p++; continue; }
+
+                        string best = "";
+                        for (auto &n : ntList) {
+                            if (alt.compare(p, n.size(), n) == 0 && n.size() > best.size())
+                                best = n;
+                        }
+                        if (!best.empty()) {
+                            tokens.push_back(best);
+                            p += best.size();
+                        }
+                        else if (isalpha((unsigned char)alt[p]) || alt[p] == '_') {
+                            string tok;
+                            while (p < alt.size() &&
+                                   (isalnum((unsigned char)alt[p]) || alt[p] == '_'))
+                                tok += alt[p++];
+                            tokens.push_back(tok);
+                        }
+                        else {
+                            tokens.push_back(string(1, alt[p]));
+                            p++;
+                        }
+                    }
+                }
+                grammar[L].push_back(tokens);
+            }
+        }
+    }
+
+    // ---------- Compute FIRST (needed for FOLLOW) ----------
+    map<string, set<string>> FIRST;
+    for (auto &n : ntList) FIRST[n] = {};
+
+    bool changed = true;
+    while (changed) {
+        changed = false;
+        for (auto &n : ntList) {
+            for (auto &prod : grammar[n]) {
+                bool allNullable = true;
+                for (auto &sym : prod) {
+                    if (sym == "ε") continue;
+                    else if (nonterminals.count(sym)) {
+                        for (auto &x : FIRST[sym])
+                            if (x != "ε" && !FIRST[n].count(x)) {
+                                FIRST[n].insert(x);
+                                changed = true;
+                            }
+                        if (!FIRST[sym].count("ε")) { allNullable = false; break; }
+                    } else {
+                        if (!FIRST[n].count(sym)) {
+                            FIRST[n].insert(sym);
+                            changed = true;
+                        }
+                        allNullable = false;
+                        break;
+                    }
+                }
+                if (allNullable && !FIRST[n].count("ε")) {
+                    FIRST[n].insert("ε");
+                    changed = true;
+                }
+            }
+        }
+    }
+
+    // ---------- Helper: FIRST of a symbol sequence ----------
+    auto firstOfSeq = [&](const vector<string> &seq, bool &nullable) -> set<string> {
+        set<string> result;
+        nullable = true;
+        for (auto &sym : seq) {
+            if (sym == "ε") continue;
+            if (nonterminals.count(sym)) {
+                for (auto &x : FIRST[sym])
+                    if (x != "ε") result.insert(x);
+                if (!FIRST[sym].count("ε")) { nullable = false; break; }
+            } else {
+                result.insert(sym);
+                nullable = false;
+                break;
+            }
+        }
+        return result;
+    };
+
+    // ---------- Compute FOLLOW ----------
+    map<string, set<string>> FOLLOW;
+    for (auto &n : ntList) FOLLOW[n] = {};
+
+    if (!ntList.empty()) FOLLOW[ntList[0]].insert("$");   // start symbol
+
+    changed = true;
+    while (changed) {
+        changed = false;
+        for (auto &n : ntList) {
+            for (auto &prod : grammar[n]) {
+                for (size_t i = 0; i < prod.size(); i++) {
+                    const string &sym = prod[i];
+                    if (!nonterminals.count(sym)) continue;
+
+                    vector<string> beta(prod.begin() + i + 1, prod.end());
+
+                    bool betaNullable = true;
+                    set<string> firstBeta = firstOfSeq(beta, betaNullable);
+
+                    for (auto &x : firstBeta) {
+                        if (!FOLLOW[sym].count(x)) {
+                            FOLLOW[sym].insert(x);
+                            changed = true;
+                        }
+                    }
+                    if (betaNullable) {
+                        for (auto &x : FOLLOW[n]) {
+                            if (!FOLLOW[sym].count(x)) {
+                                FOLLOW[sym].insert(x);
+                                changed = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // ---------- Print ONLY FOLLOW ----------
+    cout << "FOLLOW sets:\n";
+    for (auto &n : ntList) {
+        cout << "FOLLOW(" << n << ") = {";
+        bool firstItem = true;
+        for (auto &x : FOLLOW[n]) {
+            cout << (firstItem ? " " : ", ") << x;
+            firstItem = false;
+        }
+        cout << (firstItem ? "" : " ") << "}\n";
+    }
+
+    return 0;
+}
