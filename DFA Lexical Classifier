@@ -1,0 +1,67 @@
+#include <iostream>
+#include <fstream>
+#include <string>
+using namespace std;
+
+int main() {
+    ifstream f("input.txt");
+    if (!f) return cout << "File not found!\n", 1;
+    
+    string s;
+    while (f >> s) {
+        int state = 0;
+        string type = "INVALID";
+        
+        for (int i = 0; i < s.length(); i++) {
+            char c = s[i];
+            
+            if (state == 0) {
+                if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c == '_')
+                    state = 1;  // IDENTIFIER
+                else if (c >= '0' && c <= '9')
+                    state = 2;  // CONSTANT
+                else if (c == '+' || c == '-' || c == '*' || c == '/' || 
+                         c == '=' || c == '<' || c == '>' || c == '!' || 
+                         c == '&' || c == '|' || c == '%' || c == '^' || c == '~')
+                    state = 3;  // OPERATOR
+                else {
+                    state = -1;
+                    break;
+                }
+            }
+            else if (state == 1) {
+                // IDENTIFIER: letter, digit, or underscore
+                if (!((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || 
+                      (c >= '0' && c <= '9') || c == '_')) {
+                    state = -1;
+                    break;
+                }
+            }
+            else if (state == 2) {
+                // CONSTANT: digits only
+                if (!(c >= '0' && c <= '9')) {
+                    state = -1;
+                    break;
+                }
+            }
+            else if (state == 3) {
+                // OPERATOR: operators only
+                if (!(c == '+' || c == '-' || c == '*' || c == '/' || 
+                      c == '=' || c == '<' || c == '>' || c == '!' || 
+                      c == '&' || c == '|' || c == '%' || c == '^' || c == '~')) {
+                    state = -1;
+                    break;
+                }
+            }
+        }
+        
+        if (state == 1) type = "IDENTIFIER";
+        else if (state == 2) type = "CONSTANT";
+        else if (state == 3) type = "OPERATOR";
+        else type = "INVALID";
+        
+        cout << s << " -> " << type << endl;
+    }
+    f.close();
+    return 0;
+}
