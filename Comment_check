@@ -1,0 +1,49 @@
+#include <iostream>
+#include <fstream>
+#include <string>
+
+using namespace std;
+
+int main() {
+    ifstream f("input.txt");
+    if (!f) {
+        cerr << "File not found!\n";
+        return 1;
+    }
+
+    string s;
+    bool inBlockComment = false;
+
+    while (getline(f, s)) {
+        bool lineHasComment = inBlockComment;
+
+        for (size_t i = 0; i + 1 < s.length(); ++i) {
+            // Inside a block comment: look for */
+            if (inBlockComment) {
+                if (s[i] == '*' && s[i + 1] == '/') {
+                    inBlockComment = false;
+                    ++i;
+                }
+                continue;
+            }
+
+            // Line comment: // -> rest of line is comment
+            if (s[i] == '/' && s[i + 1] == '/') {
+                lineHasComment = true;
+                break;
+            }
+
+            // Block comment start: /*
+            if (s[i] == '/' && s[i + 1] == '*') {
+                inBlockComment = true;
+                lineHasComment = true;
+                ++i;
+            }
+        }
+
+        cout << s << " -> "
+             << (lineHasComment ? "COMMENT" : "NOT COMMENT") << "\n";
+    }
+
+    return 0;
+}
