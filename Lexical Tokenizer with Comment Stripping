@@ -1,0 +1,112 @@
+#include <iostream>
+#include <fstream>
+#include <string>
+using namespace std;
+
+int main() {
+    ifstream f("input.txt");
+    if (!f) return cout << "File not found!\n", 1;
+    
+    string line;
+    bool inMultiComment = false;
+    
+    cout << "TOKENS FOUND:\n";
+    cout << "----------------------------------------\n";
+    
+    while (getline(f, line)) {
+        for (int i = 0; i < line.length(); i++) {
+            char c = line[i];
+            
+            // Skip spaces and tabs
+            if (c == ' ' || c == '\t') continue;
+            
+            // Handle multi-line comments
+            if (!inMultiComment && i+1 < line.length() && c == '/' && line[i+1] == '*') {
+                inMultiComment = true;
+                i++;
+                continue;
+            }
+            if (inMultiComment && i+1 < line.length() && c == '*' && line[i+1] == '/') {
+                inMultiComment = false;
+                i++;
+                continue;
+            }
+            if (inMultiComment) continue;
+            
+            // Handle single-line comments
+            if (i+1 < line.length() && c == '/' && line[i+1] == '/') {
+                break;  // Ignore rest of line
+            }
+            
+            // Build tokens (letters, digits, underscore, dot)
+            if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || 
+                (c >= '0' && c <= '9') || c == '_' || c == '.') {
+                string token = "";
+                while (i < line.length() && 
+                       ((line[i] >= 'A' && line[i] <= 'Z') || 
+                        (line[i] >= 'a' && line[i] <= 'z') || 
+                        (line[i] >= '0' && line[i] <= '9') || 
+                        line[i] == '_' || line[i] == '.')) {
+                    token += line[i];
+                    i++;
+                }
+                i--;
+                
+                // Check if keyword
+                bool isKeyword = false;
+                string keywords[] = {"int", "float", "char", "double", "if", "else", 
+                                    "while", "for", "return", "void", "class", "public", 
+                                    "private", "switch", "case", "break", "continue"};
+                for (string kw : keywords) {
+                    if (token == kw) {
+                        isKeyword = true;
+                        break;
+                    }
+                }
+                
+                if (isKeyword) cout << token << " -> KEYWORD\n";
+                else {
+                    // Check if constant (integer or float)
+                    bool isConst = true;
+                    bool hasDot = false;
+                    for (char ch : token) {
+                        if (ch == '.') {
+                            if (hasDot) { isConst = false; break; }
+                            hasDot = true;
+                        }
+                        else if (!(ch >= '0' && ch <= '9')) {
+                            isConst = false;
+                            break;
+                        }
+                    }
+                    if (isConst) cout << token << " -> CONSTANT\n";
+                    else cout << token << " -> IDENTIFIER\n";
+                }
+            }
+            // Handle operators
+            else if (c == '+' || c == '-' || c == '*' || c == '/' || 
+                     c == '=' || c == '<' || c == '>' || c == '!' || 
+                     c == '&' || c == '|' || c == '%' || c == '^' || c == '~') {
+                string op = "";
+                op += c;
+                if (i+1 < line.length() && 
+                    ((c == '=' && line[i+1] == '=') ||
+                     (c == '!' && line[i+1] == '=') ||
+                     (c == '<' && line[i+1] == '=') ||
+                     (c == '>' && line[i+1] == '=') ||
+                     (c == '&' && line[i+1] == '&') ||
+                     (c == '|' && line[i+1] == '|'))) {
+                    op += line[i+1];
+                    i++;
+                }
+                cout << op << " -> OPERATOR\n";
+            }
+            // Handle symbols
+            else if (c == ';' || c == '(' || c == ')' || c == '{' || c == '}' || c == ',') {
+                cout << c << " -> SYMBOL\n";
+            }
+        }
+    }
+    f.close();
+    return 0;
+}
