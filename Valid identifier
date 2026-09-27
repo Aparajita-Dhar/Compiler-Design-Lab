@@ -1,0 +1,50 @@
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <cctype>          // isalpha, isalnum
+
+using namespace std;
+
+// Basic C++ keywords (short list — enough for class)
+bool isKeyword(const string& s) {
+    return (s == "int"    || s == "float"  || s == "double" || s == "char"   ||
+            s == "if"     || s == "else"   || s == "for"    || s == "while"  ||
+            s == "return" || s == "class"  || s == "struct" || s == "using"  ||
+            s == "void"   || s == "bool"   || s == "break"  || s == "continue");
+}
+
+// Is c a valid first character of an identifier?
+static bool isStart(char c) {
+    unsigned char u = static_cast<unsigned char>(c);
+    return isalpha(u) || c == '_';
+}
+
+// Is c a valid non-first character of an identifier?
+static bool isCont(char c) {
+    unsigned char u = static_cast<unsigned char>(c);
+    return isalnum(u) || c == '_';
+}
+
+int main() {
+    ifstream f("input.txt");
+    if (!f) {
+        cerr << "File not found!\n";
+        return 1;
+    }
+
+    string s;
+    while (f >> s) {
+        bool valid = !s.empty() && isStart(s[0]);
+
+        for (size_t i = 1; valid && i < s.length(); ++i) {
+            if (!isCont(s[i])) valid = false;
+        }
+
+        // Reject keywords — they cannot be used as identifiers
+        if (valid && isKeyword(s)) valid = false;
+
+        cout << s << " -> " << (valid ? "VALID" : "INVALID") << "\n";
+    }
+
+    return 0;
+}
