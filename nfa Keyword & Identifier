@@ -1,0 +1,52 @@
+#include <iostream>
+#include <fstream>
+#include <string>
+using namespace std;
+
+int main() {
+    ifstream f("input.txt");
+    if (!f) return cout << "File not found!\n", 1;
+
+    string keywords[] = {"int", "float", "char", "double", "if", "else",
+                         "while", "for", "return", "void", "class", "public",
+                         "private", "switch", "case", "break", "continue",
+                         "const", "static", "struct", "long", "short", "do",
+                         "default", "goto", "sizeof", "typedef", "enum",
+                         "signed", "unsigned", "union", "extern", "register",
+                         "auto", "volatile"};
+
+    string s;
+    while (f >> s) {
+        bool v = true;
+
+        if (s.empty()) {
+            v = false;
+        } else {
+            if (!((s[0] >= 'A' && s[0] <= 'Z') ||
+                  (s[0] >= 'a' && s[0] <= 'z') ||
+                  s[0] == '_'))
+                v = false;
+
+            for (int i = 1; v && i < (int)s.length(); i++) {
+                if (!((s[i] >= 'A' && s[i] <= 'Z') ||
+                      (s[i] >= 'a' && s[i] <= 'z') ||
+                      (s[i] >= '0' && s[i] <= '9') ||
+                      s[i] == '_'))
+                    v = false;
+            }
+        }
+
+        if (!v) {
+            cout << s << " -> INVALID\n";
+        } else {
+            // Pattern matches identifier. Now check keyword table.
+            bool isKw = false;
+            for (auto &kw : keywords)
+                if (s == kw) { isKw = true; break; }
+
+            cout << s << " -> " << (isKw ? "KEYWORD" : "IDENTIFIER") << "\n";
+        }
+    }
+    f.close();
+    return 0;
+}
