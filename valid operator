@@ -1,0 +1,58 @@
+#include <iostream>
+#include <fstream>
+#include <string>
+
+using namespace std;
+
+// Single-character operators
+bool isOperator(char c) {
+    return c == '+' || c == '-' || c == '*' || c == '/' || c == '%' ||
+           c == '=' || c == '<' || c == '>' || c == '!' || c == '&' ||
+           c == '|' || c == '^' || c == '~';
+}
+
+// Two-character operators we want to detect as a single unit
+bool isTwoCharOp(const string& s, size_t i) {
+    if (i + 1 >= s.length()) return false;
+    string two = s.substr(i, 2);
+
+    return two == "==" || two == "!=" || two == "<=" || two == ">=" ||
+           two == "&&" || two == "||" || two == "++" || two == "--" ||
+           two == "+=" || two == "-=" || two == "*=" || two == "/=" ||
+           two == "%=" || two == "<<" || two == ">>" || two == "->";
+}
+
+int main() {
+    ifstream f("input.txt");
+    if (!f) {
+        cerr << "File not found!\n";
+        return 1;
+    }
+
+    string s;
+    while (getline(f, s)) {
+        cout << "Expression: " << s << "\nOperators found: ";
+        bool found = false;
+
+        for (size_t i = 0; i < s.length(); ++i) {
+            // Check two-char operators first
+            if (isTwoCharOp(s, i)) {
+                cout << s[i] << s[i + 1] << " ";
+                ++i;   // consume second char
+                found = true;
+                continue;
+            }
+
+            // Then single-char operators
+            if (isOperator(s[i])) {
+                cout << s[i] << " ";
+                found = true;
+            }
+        }
+
+        if (!found) cout << "None";
+        cout << "\n\n";
+    }
+
+    return 0;
+}
