@@ -1,0 +1,52 @@
+#include <iostream>
+#include <fstream>
+#include <cctype>
+
+using namespace std;
+
+int main() {
+    ifstream f("input.txt");
+    if (!f) {
+        cerr << "File not found!\n";
+        return 1;                     // clean error handling ✅
+    }
+
+    long long ch = 0;   // character (byte) count
+    long long w  = 0;   // word count
+    long long l  = 0;   // line count
+
+    bool inWord = false;
+    unsigned char lastChar = 0;       // remembers the most recent byte read
+
+    int ci;
+    while ((ci = f.get()) != EOF) {   // safe EOF handling ✅
+        unsigned char c = static_cast<unsigned char>(ci);
+        ch++;
+        lastChar = c;                 // update "last byte seen"
+
+        // Word logic
+        if (isspace(c)) {
+            inWord = false;           // whitespace ends a word
+        } else if (!inWord) {
+            inWord = true;
+            w++;                      // new word started
+        }
+
+        // Line logic: count newline characters
+        if (c == '\n') {
+            l++;                      // one line per '\n'
+        }
+    }
+
+    // If the file had content but didn't end in '\n',
+    // the final (unterminated) line still counts.
+    if (ch > 0 && lastChar != '\n') {
+        l++;
+    }
+
+    cout << "Characters: " << ch
+         << "\nWords: "      << w
+         << "\nLines: "      << l << endl;
+
+    return 0;
+}
